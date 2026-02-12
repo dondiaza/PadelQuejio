@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { auth } from "@/lib/auth";
+import { formatDateTime } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { getEffectiveSubscription } from "@/lib/subscriptions";
 
@@ -26,9 +27,9 @@ export default async function AppDashboardPage() {
   return (
     <div className="space-y-4">
       <section className="card p-6">
-        <h1 className="text-5xl">HOLA, {session.user.name?.split(" ")[0] ?? "Jugador"}</h1>
+        <h1 className="section-title">HOLA, {session.user.name?.split(" ")[0] ?? "Jugador"}</h1>
         <p className="mt-2 text-sm text-muted">
-          Gestiona tus reservas, pagos e invitaciones desde una sola vista.
+          Gestiona tus reservas, pagos, grupos y suscripcion desde una sola vista.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Link href="/app/reservar" className="btn-primary text-sm">
@@ -36,6 +37,9 @@ export default async function AppDashboardPage() {
           </Link>
           <Link href="/app/mis-reservas" className="btn-secondary text-sm">
             Ver historial
+          </Link>
+          <Link href="/app/amigos" className="btn-secondary text-sm">
+            Amigos y grupos
           </Link>
         </div>
       </section>
@@ -48,9 +52,10 @@ export default async function AppDashboardPage() {
               <p className="text-muted">No tienes reservas proximas.</p>
             ) : (
               nextReservations.map((reservation) => (
-                <p key={reservation.id}>
-                  {reservation.court.name}: {reservation.startAt.toISOString().replace("T", " ").slice(0, 16)}
-                </p>
+                <div key={reservation.id} className="rounded-xl border border-border bg-white p-3">
+                  <p className="font-semibold">{reservation.court.name}</p>
+                  <p>{formatDateTime(reservation.startAt)}</p>
+                </div>
               ))
             )}
           </div>
@@ -61,11 +66,19 @@ export default async function AppDashboardPage() {
             <div className="mt-3 text-sm">
               <p>Plan: {subscription.plan.name}</p>
               <p>Fuente: {subscription.source}</p>
-              <p>Valida hasta: {subscription.endsAt.toISOString().slice(0, 10)}</p>
+              <p>Valida hasta: {formatDateTime(subscription.endsAt)}</p>
             </div>
           ) : (
             <p className="mt-3 text-sm text-muted">Sin plan activo.</p>
           )}
+          <div className="mt-4 flex gap-2">
+            <Link href="/app/suscripcion" className="btn-primary text-xs">
+              Gestionar plan
+            </Link>
+            <Link href="/app/pagos" className="btn-secondary text-xs">
+              Ver pagos
+            </Link>
+          </div>
         </article>
       </section>
     </div>

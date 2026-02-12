@@ -1,10 +1,5 @@
-import { AdminPlaceholder } from "@/components/admin-placeholder";
+import { CourtsManager } from "@/components/admin/courts-manager";
 
 export default function AdminNewCourtPage() {
-  return (
-    <AdminPlaceholder
-      title="NUEVA PISTA"
-      description="Alta asistida de pistas con fotos y features."
-    />
-  );
+  return <CourtsManager initialCourts={[]} />;
 }

@@ -1,10 +1,25 @@
-import { AdminPlaceholder } from "@/components/admin-placeholder";
+import { SpecialDatesManager } from "@/components/admin/special-dates-manager";
+import { prisma } from "@/lib/prisma";
 
-export default function AdminSpecialDatesPage() {
+function toTime(date: Date | null) {
+  return date ? date.toISOString().slice(11, 16) : null;
+}
+
+export default async function AdminSpecialDatesPage() {
+  const rows = await prisma.specialDate.findMany({
+    orderBy: { date: "asc" },
+  });
+
   return (
-    <AdminPlaceholder
-      title="FESTIVOS Y EXCEPCIONES"
-      description="Administra cierres y horarios especiales. API en /api/admin/special-dates."
+    <SpecialDatesManager
+      initialRows={rows.map((row) => ({
+        id: row.id,
+        date: row.date.toISOString().slice(0, 10),
+        isClosed: row.isClosed,
+        opensAt: toTime(row.opensAt),
+        closesAt: toTime(row.closesAt),
+        note: row.note,
+      }))}
     />
   );
 }

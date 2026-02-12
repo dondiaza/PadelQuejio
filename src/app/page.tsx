@@ -7,14 +7,15 @@ export default async function Home() {
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-10">
-        <section className="card relative overflow-hidden p-8 md:p-12">
-          <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-secondary/15" />
-          <div className="absolute -bottom-20 left-24 h-56 w-56 rounded-full bg-primary/15" />
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-8 md:py-10">
+        <section className="card sport-grid relative overflow-hidden p-7 md:p-12">
+          <div className="absolute -right-20 -top-16 h-52 w-52 rounded-full bg-secondary/20" />
+          <div className="absolute -bottom-24 left-28 h-60 w-60 rounded-full bg-primary/20" />
+          <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-transparent to-transparent" />
           <div className="relative grid gap-8 md:grid-cols-2">
             <div className="space-y-5">
               <span className="pill">Club social y competitivo</span>
-              <h1 className="text-5xl leading-none text-foreground md:text-7xl">
+              <h1 className="section-title text-foreground">
                 RESERVA TU PISTA EN 30 SEGUNDOS
               </h1>
               <p className="max-w-md text-sm text-muted md:text-base">
@@ -28,9 +29,12 @@ export default async function Home() {
                 <Link href="/como-funciona" className="btn-secondary">
                   Como funciona
                 </Link>
+                <Link href="/login" className="btn-secondary">
+                  Entrar con Google
+                </Link>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 md:pt-8">
               <article className="card p-4">
                 <p className="text-sm text-muted">Pistas activas</p>
                 <p className="text-4xl text-secondary">6</p>
@@ -71,6 +75,45 @@ export default async function Home() {
               <p className="mt-2 text-sm text-muted">{item.body}</p>
             </article>
           ))}
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-2">
+          <article className="card p-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-4xl">Jugadores</h2>
+              <span className="chip">mobile first</span>
+            </div>
+            <p className="mt-2 text-sm text-muted">
+              Reserva en dos pasos, invita al grupo y recibe recordatorios automaticos por
+              email.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link href="/registro" className="btn-primary text-sm">
+                Crear cuenta
+              </Link>
+              <Link href="/app/reservar" className="btn-secondary text-sm">
+                Entrar a reservar
+              </Link>
+            </div>
+          </article>
+          <article className="card p-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-4xl">Recepcion / Admin</h2>
+              <span className="chip">operativo diario</span>
+            </div>
+            <p className="mt-2 text-sm text-muted">
+              Gestion de horarios, festivos, suscripciones manuales en efectivo y auditoria de
+              cambios.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link href="/admin" className="btn-secondary text-sm">
+                Ir a admin
+              </Link>
+              <Link href="/admin/suscripciones" className="btn-primary text-sm">
+                Suscripcion manual
+              </Link>
+            </div>
+          </article>
         </section>
       </main>
       <SiteFooter />

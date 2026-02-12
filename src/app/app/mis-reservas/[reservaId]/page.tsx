@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { ReservationActions } from "@/components/reservations/reservation-actions";
 import { auth } from "@/lib/auth";
+import { formatDateTime } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 
 type Params = Promise<{ reservaId: string }>;
@@ -34,13 +35,13 @@ export default async function ReservationDetailPage(props: { params: Params }) {
 
   return (
     <section className="card p-6">
-      <h1 className="text-5xl">DETALLE RESERVA</h1>
+      <h1 className="section-title">DETALLE RESERVA</h1>
       <div className="mt-4 grid gap-2 text-sm">
         <p>Pista: {reservation.court.name}</p>
-        <p>Inicio: {reservation.startAt.toISOString().replace("T", " ").slice(0, 16)}</p>
-        <p>Fin: {reservation.endAt.toISOString().replace("T", " ").slice(0, 16)}</p>
+        <p>Inicio: {formatDateTime(reservation.startAt)}</p>
+        <p>Fin: {formatDateTime(reservation.endAt)}</p>
         <p>Estado: {reservation.status}</p>
-        <p>Cancelacion hasta: {reservation.cancellationDeadlineAt.toISOString().replace("T", " ").slice(0, 16)}</p>
+        <p>Cancelacion hasta: {formatDateTime(reservation.cancellationDeadlineAt)}</p>
       </div>
 
       <div className="mt-5">

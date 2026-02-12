@@ -33,10 +33,26 @@ function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function formatHour(value: string) {
+  return new Intl.DateTimeFormat("es-ES", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Madrid",
+  }).format(new Date(value));
+}
+
+const reasonMap: Record<string, string> = {
+  outside_booking_window: "Fuera de ventana de reserva de tu plan",
+  max_active_reservations_reached: "Has alcanzado el maximo de reservas activas",
+  subscription_required: "Necesitas una suscripcion activa",
+  subscription_past_due: "Tu suscripcion esta pendiente de pago",
+};
+
 export function ReserveForm({ courts }: ReserveFormProps) {
   const [date, setDate] = useState(today);
   const [courtId, setCourtId] = useState(courts[0]?.id ?? "");
   const [selectedSlot, setSelectedSlot] = useState<AvailabilitySlot | null>(null);
+  const [paymentMode, setPaymentMode] = useState<"club" | "online">("club");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -77,32 +93,61 @@ export function ReserveForm({ courts }: ReserveFormProps) {
         courtId,
         startAt: selectedSlot.startAt,
         endAt: selectedSlot.endAt,
-        requiresPayment: false,
+        requiresPayment: paymentMode === "online",
       }),
     });
 
-    const payload = (await response.json()) as { error?: string; data?: { id: string } };
+    const payload = (await response.json()) as {
+      error?: string;
+      data?: { id: string; status: string };
+    };
 
-    setSubmitting(false);
     if (!response.ok) {
+      setSubmitting(false);
       setError(payload.error ?? "No se pudo crear la reserva.");
       return;
     }
 
+    if (paymentMode === "online" && payload.data?.id && payload.data.status === "pending_payment") {
+      const checkoutResponse = await fetch("/api/payments/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reservationId: payload.data.id }),
+      });
+      const checkoutPayload = (await checkoutResponse.json()) as {
+        error?: string;
+        data?: { checkoutUrl?: string };
+      };
+
+      if (!checkoutResponse.ok || !checkoutPayload.data?.checkoutUrl) {
+        setSubmitting(false);
+        setError(checkoutPayload.error ?? "No se pudo iniciar el pago.");
+        return;
+      }
+
+      window.location.href = checkoutPayload.data.checkoutUrl;
+      return;
+    }
+
+    setSubmitting(false);
+    setSelectedSlot(null);
     setSuccess(`Reserva confirmada: ${payload.data?.id ?? ""}`);
   }
 
   return (
     <section className="card p-6">
-      <h1 className="text-5xl">RESERVAR PISTA</h1>
-      <p className="mt-2 text-sm text-muted">Selecciona fecha, pista y franja.</p>
+      <h1 className="section-title">RESERVAR PISTA</h1>
+      <p className="mt-2 text-sm text-muted">
+        Selecciona fecha, pista y franja. Sin solapes y con disponibilidad en tiempo real.
+      </p>
 
-      <div className="mt-5 grid gap-3 md:grid-cols-2">
+      <div className="mt-5 grid gap-3 md:grid-cols-3">
         <label className="text-sm">
           Fecha
           <input
             type="date"
             value={date}
+            min={today()}
             onChange={(event) => {
               setDate(event.target.value);
               setSelectedSlot(null);
@@ -128,13 +173,37 @@ export function ReserveForm({ courts }: ReserveFormProps) {
             ))}
           </select>
         </label>
+
+        <fieldset className="rounded-xl border border-border bg-white px-3 py-2 text-sm">
+          <legend className="px-1 text-xs text-muted">Metodo de pago</legend>
+          <div className="mt-1 flex items-center gap-3">
+            <label className="inline-flex items-center gap-1">
+              <input
+                type="radio"
+                name="paymentMode"
+                checked={paymentMode === "club"}
+                onChange={() => setPaymentMode("club")}
+              />
+              En club
+            </label>
+            <label className="inline-flex items-center gap-1">
+              <input
+                type="radio"
+                name="paymentMode"
+                checked={paymentMode === "online"}
+                onChange={() => setPaymentMode("online")}
+              />
+              Online
+            </label>
+          </div>
+        </fieldset>
       </div>
 
       <div className="mt-6">
         <h2 className="text-3xl">Slots disponibles {selectedCourt ? `en ${selectedCourt.name}` : ""}</h2>
         {availabilityQuery.isPending ? <p className="mt-2 text-sm text-muted">Cargando...</p> : null}
         {availabilityQuery.isError ? (
-          <p className="mt-2 text-sm text-red-600">
+          <p className="mt-2 text-sm text-danger">
             {availabilityQuery.error instanceof Error
               ? availabilityQuery.error.message
               : "Error de disponibilidad."}
@@ -151,42 +220,53 @@ export function ReserveForm({ courts }: ReserveFormProps) {
               type="button"
               disabled={!slot.bookable}
               onClick={() => setSelectedSlot(slot)}
-              className={`rounded-xl border px-3 py-2 text-left text-sm transition ${
+              className={`rounded-2xl border px-3 py-3 text-left text-sm transition ${
                 selectedSlot?.startAt === slot.startAt
                   ? "border-secondary bg-secondary/10"
                   : "border-border bg-white"
-              } ${!slot.bookable ? "cursor-not-allowed opacity-60" : ""}`}
+              } ${!slot.bookable ? "cursor-not-allowed opacity-70" : "hover:border-secondary/50"}`}
             >
-              <p className="font-semibold">
-                {slot.startAt.slice(11, 16)} - {slot.endAt.slice(11, 16)}
-              </p>
-              <p className="text-muted">
+              <div className="flex items-center justify-between">
+                <p className="font-semibold">
+                  {formatHour(slot.startAt)} - {formatHour(slot.endAt)}
+                </p>
+                <span className={`chip ${slot.bookable ? "" : "border-red-200 text-red-700"}`}>
+                  {slot.bookable ? "Disponible" : "Bloqueada"}
+                </span>
+              </div>
+              <p className="mt-1 text-muted">
                 {slot.price} {slot.currency}
               </p>
-              {!slot.bookable ? <p className="text-xs text-red-600">{slot.reason}</p> : null}
+              {!slot.bookable ? (
+                <p className="mt-1 text-xs text-danger">{reasonMap[slot.reason ?? ""] ?? slot.reason}</p>
+              ) : null}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="mt-6 flex items-center gap-3">
+      <div className="mt-6 flex flex-wrap items-center gap-3">
         <button
           type="button"
           disabled={!selectedSlot || submitting}
           onClick={confirmReservation}
-          className="btn-primary text-sm disabled:opacity-60"
+          className="btn-primary text-sm disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {submitting ? "Confirmando..." : "Confirmar reserva"}
+          {submitting
+            ? "Confirmando..."
+            : paymentMode === "online"
+              ? "Confirmar y pagar online"
+              : "Confirmar reserva"}
         </button>
         {selectedSlot ? (
           <p className="text-sm text-muted">
-            {selectedSlot.startAt.slice(11, 16)} - {selectedSlot.endAt.slice(11, 16)}
+            Slot: {formatHour(selectedSlot.startAt)} - {formatHour(selectedSlot.endAt)}
           </p>
         ) : null}
       </div>
 
-      {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
-      {success ? <p className="mt-3 text-sm text-secondary">{success}</p> : null}
+      {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
+      {success ? <p className="mt-3 text-sm text-success">{success}</p> : null}
     </section>
   );
 }

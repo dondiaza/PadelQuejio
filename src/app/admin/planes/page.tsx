@@ -1,10 +1,22 @@
-import { AdminPlaceholder } from "@/components/admin-placeholder";
+import { PlansManager } from "@/components/admin/plans-manager";
+import { prisma } from "@/lib/prisma";
 
-export default function AdminPlansPage() {
+export default async function AdminPlansPage() {
+  const plans = await prisma.plan.findMany({
+    orderBy: { price: "asc" },
+  });
+
   return (
-    <AdminPlaceholder
-      title="PLANES"
-      description="Gestion de planes y beneficios (credits, prioridad, descuentos)."
+    <PlansManager
+      initialPlans={plans.map((plan) => ({
+        id: plan.id,
+        name: plan.name,
+        description: plan.description,
+        price: Number(plan.price),
+        billingPeriod: plan.billingPeriod,
+        isActive: plan.isActive,
+        benefits: (plan.benefits as Record<string, unknown>) ?? {},
+      }))}
     />
   );
 }

@@ -1,25 +1,33 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f8eb;
-  --surface: #fffdf6;
-  --foreground: #10221c;
+  --background: #f5f9ec;
+  --surface: #fffef8;
+  --surface-soft: #f1f7de;
+  --foreground: #10211f;
   --primary: #ff5b29;
   --secondary: #0f766e;
-  --muted: #637672;
-  --border: #d7e2d2;
+  --accent: #1b4fdb;
+  --muted: #5d7169;
+  --border: #ccdbc7;
   --ring: #ff8f5f;
+  --success: #0f8b63;
+  --danger: #b42318;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-surface: var(--surface);
+  --color-surface-soft: var(--surface-soft);
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
   --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
   --color-muted: var(--muted);
   --color-border: var(--border);
   --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
   --font-sans: var(--font-body);
   --font-heading: var(--font-heading);
 }
@@ -34,9 +42,10 @@ body {
   font-family: var(--font-body), sans-serif;
   min-height: 100vh;
   background-image:
-    radial-gradient(circle at 0% 0%, #e8f4c6 0%, transparent 35%),
-    radial-gradient(circle at 100% 0%, #c4efe6 0%, transparent 30%),
-    linear-gradient(180deg, #f5f8eb 0%, #edf4da 100%);
+    radial-gradient(circle at 12% 0%, rgb(221 238 146 / 70%) 0%, transparent 34%),
+    radial-gradient(circle at 88% -4%, rgb(120 214 195 / 56%) 0%, transparent 28%),
+    radial-gradient(circle at 50% 120%, rgb(172 211 255 / 40%) 0%, transparent 44%),
+    linear-gradient(180deg, #f5f9ec 0%, #ebf3d5 100%);
 }
 
 h1,
@@ -45,6 +54,7 @@ h3,
 h4 {
   font-family: var(--font-heading), sans-serif;
   letter-spacing: 0.04em;
+  line-height: 0.95;
 }
 
 a {
@@ -54,38 +64,126 @@ a {
 
 .card {
   border: 1px solid var(--border);
-  background: var(--surface);
-  border-radius: 18px;
-  box-shadow: 0 10px 20px rgb(16 34 28 / 8%);
+  background: linear-gradient(180deg, #fffef9 0%, #fffdf4 100%);
+  border-radius: 20px;
+  box-shadow: 0 12px 24px rgb(16 34 28 / 8%);
+  position: relative;
+  overflow: hidden;
+}
+
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 100% 0%, rgb(255 255 255 / 55%) 0%, transparent 32%),
+    linear-gradient(120deg, transparent 0%, rgb(255 255 255 / 18%) 100%);
+  pointer-events: none;
 }
 
 .btn-primary {
   background: linear-gradient(135deg, #ff5b29, #ff8f5f);
   color: #fff;
   border-radius: 999px;
-  padding: 0.7rem 1.2rem;
-  font-weight: 600;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  padding: 0.72rem 1.24rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
 }
 
 .btn-primary:hover {
-  transform: translateY(-1px);
+  transform: translateY(-1px) scale(1.01);
   box-shadow: 0 8px 20px rgb(255 91 41 / 35%);
+  filter: saturate(1.06);
 }
 
 .btn-secondary {
-  border: 1px solid var(--border);
-  background: #fff;
+  border: 1px solid #bdd0c0;
+  background: rgb(255 255 255 / 86%);
+  color: #21443d;
   border-radius: 999px;
-  padding: 0.7rem 1.2rem;
-  font-weight: 600;
+  padding: 0.72rem 1.24rem;
+  font-weight: 700;
+  transition: border-color 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+}
+
+.btn-secondary:hover {
+  border-color: #82a995;
+  transform: translateY(-1px);
+  background: rgb(244 255 244 / 86%);
 }
 
 .pill {
   border: 1px solid #bad9cc;
-  background: #eef7f3;
+  background: linear-gradient(180deg, #effcf7, #e8f4ef);
   border-radius: 999px;
   color: #115f56;
-  padding: 0.2rem 0.6rem;
+  padding: 0.23rem 0.64rem;
   font-size: 0.8rem;
+  font-weight: 700;
+  width: fit-content;
+}
+
+.chip {
+  border: 1px solid #b7c8bc;
+  background: #f8fcf0;
+  border-radius: 999px;
+  color: #35594f;
+  padding: 0.24rem 0.64rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.glow-ring {
+  position: relative;
+}
+
+.glow-ring::before {
+  content: "";
+  position: absolute;
+  inset: -25%;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgb(255 146 90 / 44%), transparent 65%);
+  pointer-events: none;
+  opacity: 0.8;
+  animation: pulseGlow 3.2s ease-in-out infinite;
+}
+
+.sport-grid {
+  background-image:
+    linear-gradient(rgb(16 33 31 / 3%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(16 33 31 / 3%) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.section-title {
+  font-size: clamp(2.1rem, 4.2vw, 3.9rem);
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@keyframes pulseGlow {
+  0%,
+  100% {
+    transform: scale(0.92);
+    opacity: 0.45;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.85;
+  }
 }

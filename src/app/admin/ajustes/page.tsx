@@ -1,10 +1,12 @@
-import { AdminPlaceholder } from "@/components/admin-placeholder";
+import { SettingsManager } from "@/components/admin/settings-manager";
+import { prisma } from "@/lib/prisma";
 
-export default function AdminSettingsPage() {
-  return (
-    <AdminPlaceholder
-      title="AJUSTES"
-      description="Config global: cancelacion, expiracion pending payment, impuestos y legales."
-    />
-  );
+export default async function AdminSettingsPage() {
+  const rows = await prisma.setting.findMany({
+    orderBy: { key: "asc" },
+  });
+
+  const initialSettings = Object.fromEntries(rows.map((row) => [row.key, row.value]));
+
+  return <SettingsManager initialSettings={initialSettings} />;
 }

@@ -92,6 +92,14 @@ export function RegisterForm() {
       <p className="mt-4 text-sm text-muted">
         Ya tienes cuenta? <Link href="/login" className="text-secondary">Entrar</Link>
       </p>
+
+      <button
+        type="button"
+        onClick={() => signIn("google", { callbackUrl: "/app" })}
+        className="btn-secondary mt-3 w-full text-sm"
+      >
+        Crear cuenta con Gmail
+      </button>
     </div>
   );
 }

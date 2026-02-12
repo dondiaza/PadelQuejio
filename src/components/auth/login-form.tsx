@@ -37,15 +37,15 @@ export function LoginForm() {
 
   return (
     <div className="card mx-auto w-full max-w-md p-6">
-      <h1 className="text-4xl">ENTRAR</h1>
-      <p className="mt-1 text-sm text-muted">Accede con email o Google.</p>
+      <h1 className="section-title text-center md:text-left">ENTRAR</h1>
+      <p className="mt-1 text-sm text-muted">Accede con email o con tu cuenta de Gmail.</p>
 
       <form onSubmit={onSubmit} className="mt-5 space-y-3">
         <label className="block text-sm">
-          Email
+          Usuario o email
           <input
             name="email"
-            type="email"
+            type="text"
             required
             className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm"
           />
@@ -73,7 +73,7 @@ export function LoginForm() {
         onClick={() => signIn("google", { callbackUrl })}
         className="btn-secondary mt-3 w-full text-sm"
       >
-        Continuar con Google
+        Continuar con Gmail
       </button>
     </div>
   );

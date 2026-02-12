@@ -21,21 +21,47 @@ export default async function AdminLayout({
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-border bg-surface">
+      <header className="border-b border-border/80 bg-surface/90 backdrop-blur">
         <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4">
-          <Link href="/" className="text-2xl text-primary">
-            PADEL QUEJIO ADMIN
+          <Link href="/" className="text-2xl tracking-wide">
+            <span className="text-primary">PQ</span> ADMIN
           </Link>
-          <nav className="flex flex-wrap items-center gap-3 text-sm">
-            <Link href="/admin">Dashboard</Link>
-            <Link href="/admin/calendario">Calendario</Link>
-            <Link href="/admin/pistas">Pistas</Link>
-            <Link href="/admin/suscripciones">Suscripciones</Link>
+          <nav className="flex max-w-full flex-1 items-center gap-2 overflow-x-auto pb-1 text-sm md:justify-center md:pb-0">
+            <Link href="/admin" className="btn-secondary whitespace-nowrap px-3 py-1.5 text-xs">
+              Dashboard
+            </Link>
+            <Link
+              href="/admin/calendario"
+              className="btn-secondary whitespace-nowrap px-3 py-1.5 text-xs"
+            >
+              Calendario
+            </Link>
+            <Link href="/admin/pistas" className="btn-secondary whitespace-nowrap px-3 py-1.5 text-xs">
+              Pistas
+            </Link>
+            <Link
+              href="/admin/reservas"
+              className="btn-secondary whitespace-nowrap px-3 py-1.5 text-xs"
+            >
+              Reservas
+            </Link>
+            <Link
+              href="/admin/suscripciones"
+              className="btn-secondary whitespace-nowrap px-3 py-1.5 text-xs"
+            >
+              Suscripciones
+            </Link>
+            <Link
+              href="/admin/estadisticas"
+              className="btn-secondary whitespace-nowrap px-3 py-1.5 text-xs"
+            >
+              Estadisticas
+            </Link>
           </nav>
           <SignOutButton />
         </div>
       </header>
-      <main className="mx-auto w-full max-w-7xl px-4 py-8">{children}</main>
+      <main className="mx-auto w-full max-w-7xl px-4 py-6 md:py-8">{children}</main>
     </div>
   );
 }

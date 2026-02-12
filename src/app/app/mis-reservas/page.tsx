@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { auth } from "@/lib/auth";
+import { formatDateTime } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 
 export default async function MyReservationsPage() {
@@ -33,7 +34,7 @@ export default async function MyReservationsPage() {
   return (
     <div className="space-y-6">
       <section className="card p-6">
-        <h1 className="text-5xl">MIS RESERVAS</h1>
+        <h1 className="section-title">MIS RESERVAS</h1>
         <p className="mt-2 text-sm text-muted">
           Proximas e historico en una sola vista.
         </p>
@@ -49,8 +50,11 @@ export default async function MyReservationsPage() {
               upcoming.map((reservation) => (
                 <div key={reservation.id} className="rounded-xl border border-border bg-white p-3 text-sm">
                   <p className="font-semibold">{reservation.court.name}</p>
-                  <p>{reservation.startAt.toISOString().replace("T", " ").slice(0, 16)}</p>
+                  <p>{formatDateTime(reservation.startAt)}</p>
                   <p className="text-muted">Estado: {reservation.status}</p>
+                  <Link href={`/app/mis-reservas/${reservation.id}`} className="mt-1 inline-flex text-secondary">
+                    Ver detalle
+                  </Link>
                 </div>
               ))
             )}
@@ -66,7 +70,7 @@ export default async function MyReservationsPage() {
               history.map((reservation) => (
                 <div key={reservation.id} className="rounded-xl border border-border bg-white p-3 text-sm">
                   <p className="font-semibold">{reservation.court.name}</p>
-                  <p>{reservation.startAt.toISOString().replace("T", " ").slice(0, 16)}</p>
+                  <p>{formatDateTime(reservation.startAt)}</p>
                   <p className="text-muted">Estado: {reservation.status}</p>
                 </div>
               ))
