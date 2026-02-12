@@ -1,0 +1,476 @@
+generator client {
+  provider = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserStatus {
+  active
+  blocked
+  pending
+}
+
+enum CourtStatus {
+  active
+  maintenance
+  inactive
+}
+
+enum ReservationStatus {
+  pending_payment
+  confirmed
+  cancelled
+  no_show
+  expired
+}
+
+enum PaymentProvider {
+  stripe
+  manual_cash
+}
+
+enum PaymentIntentStatus {
+  pending
+  requires_action
+  succeeded
+  failed
+  cancelled
+}
+
+enum RefundStatus {
+  pending
+  succeeded
+  failed
+}
+
+enum BillingPeriod {
+  monthly
+  yearly
+}
+
+enum SubscriptionStatus {
+  active
+  past_due
+  cancelled
+  expired
+}
+
+enum SubscriptionSource {
+  stripe
+  manual_cash
+}
+
+enum NotificationChannel {
+  email
+  sms
+  push
+}
+
+enum NotificationStatus {
+  queued
+  processing
+  sent
+  failed
+  cancelled
+}
+
+enum InviteStatus {
+  pending
+  accepted
+  rejected
+  revoked
+}
+
+enum GroupMemberRole {
+  owner
+  member
+}
+
+model User {
+  id             String          @id @default(cuid())
+  email          String          @unique
+  name           String?
+  phone          String?
+  image          String?
+  status         UserStatus      @default(active)
+  passwordHash   String?         @map("password_hash")
+  emailVerified  DateTime?       @map("email_verified")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  accounts       Account[]
+  sessions       Session[]
+  userRoles      UserRole[]
+  reservations   Reservation[]
+  groupsOwned    Group[]         @relation("GroupOwner")
+  groupMembers   GroupMember[]
+  paymentIntents PaymentIntent[]
+  invoices       Invoice[]
+  subscriptions  Subscription[]
+  credits        Credit[]
+  notifications  Notification[]
+  auditLogs      AuditLog[]      @relation("AuditActor")
+  blocksCreated  CourtBlock[]    @relation("BlockCreator")
+
+  @@map("users")
+}
+
+model Role {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  userRoles UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  userId    String   @map("user_id")
+  roleId    Int      @map("role_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model Court {
+  id              String        @id @default(cuid())
+  name            String
+  slug            String        @unique
+  description     String?
+  features        Json?
+  status          CourtStatus   @default(active)
+  baseSlotMinutes Int           @default(60) @map("base_slot_minutes")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  images          CourtImage[]
+  blocks          CourtBlock[]
+  reservations    Reservation[]
+
+  @@map("courts")
+}
+
+model CourtImage {
+  id        String   @id @default(cuid())
+  courtId   String   @map("court_id")
+  url       String
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  court     Court    @relation(fields: [courtId], references: [id], onDelete: Cascade)
+
+  @@index([courtId])
+  @@map("court_images")
+}
+
+model OpeningHour {
+  id        String   @id @default(cuid())
+  dayOfWeek Int      @map("day_of_week")
+  opensAt   DateTime @map("opens_at") @db.Time(0)
+  closesAt  DateTime @map("closes_at") @db.Time(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([dayOfWeek])
+  @@map("opening_hours")
+}
+
+model SpecialDate {
+  id        String    @id @default(cuid())
+  date      DateTime  @db.Date
+  isClosed  Boolean   @default(false) @map("is_closed")
+  opensAt   DateTime? @map("opens_at") @db.Time(0)
+  closesAt  DateTime? @map("closes_at") @db.Time(0)
+  note      String?
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@unique([date])
+  @@map("special_dates")
+}
+
+model CourtBlock {
+  id          String   @id @default(cuid())
+  courtId     String   @map("court_id")
+  startAt     DateTime @map("start_at") @db.Timestamptz(6)
+  endAt       DateTime @map("end_at") @db.Timestamptz(6)
+  reason      String
+  createdById String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  court       Court    @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  createdBy   User     @relation("BlockCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([courtId, startAt, endAt])
+  @@map("court_blocks")
+}
+
+model Reservation {
+  id                     String              @id @default(cuid())
+  userId                 String              @map("user_id")
+  courtId                String              @map("court_id")
+  startAt                DateTime            @map("start_at") @db.Timestamptz(6)
+  endAt                  DateTime            @map("end_at") @db.Timestamptz(6)
+  status                 ReservationStatus
+  priceTotal             Decimal             @map("price_total") @db.Decimal(10, 2)
+  currency               String              @default("EUR")
+  cancellationDeadlineAt DateTime            @map("cancellation_deadline_at") @db.Timestamptz(6)
+  cancelledAt            DateTime?           @map("cancelled_at") @db.Timestamptz(6)
+  expiredAt              DateTime?           @map("expired_at") @db.Timestamptz(6)
+  createdAt              DateTime            @default(now()) @map("created_at")
+  updatedAt              DateTime            @updatedAt @map("updated_at")
+  user                   User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  court                  Court               @relation(fields: [courtId], references: [id], onDelete: Restrict)
+  invites                ReservationInvite[]
+  paymentIntents         PaymentIntent[]
+  notifications          Notification[]
+
+  @@index([courtId, startAt, endAt])
+  @@index([userId, startAt])
+  @@index([status])
+  @@map("reservations")
+}
+
+model ReservationInvite {
+  id            String       @id @default(cuid())
+  reservationId String       @map("reservation_id")
+  invitedName   String?      @map("invited_name")
+  invitedEmail  String?      @map("invited_email")
+  invitedPhone  String?      @map("invited_phone")
+  inviteToken   String       @unique @map("invite_token")
+  status        InviteStatus @default(pending)
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+  reservation   Reservation  @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  @@index([reservationId])
+  @@map("reservation_invites")
+}
+
+model Group {
+  id          String        @id @default(cuid())
+  ownerUserId String        @map("owner_user_id")
+  name        String
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  owner       User          @relation("GroupOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  members     GroupMember[]
+
+  @@index([ownerUserId])
+  @@map("groups")
+}
+
+model GroupMember {
+  groupId   String          @map("group_id")
+  userId    String          @map("user_id")
+  role      GroupMemberRole @default(member)
+  createdAt DateTime        @default(now()) @map("created_at")
+  group     Group           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, userId])
+  @@map("group_members")
+}
+
+model PaymentIntent {
+  id               String              @id @default(cuid())
+  reservationId    String?             @map("reservation_id")
+  userId           String              @map("user_id")
+  provider         PaymentProvider
+  providerIntentId String              @map("provider_intent_id")
+  amount           Decimal             @db.Decimal(10, 2)
+  currency         String              @default("EUR")
+  status           PaymentIntentStatus @default(pending)
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+  reservation      Reservation?        @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+  user             User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  refunds          Refund[]
+
+  @@unique([provider, providerIntentId])
+  @@index([userId, createdAt])
+  @@index([reservationId])
+  @@map("payment_intents")
+}
+
+model Refund {
+  id              String        @id @default(cuid())
+  paymentIntentId String        @map("payment_intent_id")
+  amount          Decimal       @db.Decimal(10, 2)
+  reason          String?
+  status          RefundStatus  @default(pending)
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  paymentIntent   PaymentIntent @relation(fields: [paymentIntentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentIntentId])
+  @@map("refunds")
+}
+
+model Invoice {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  number    String   @unique
+  amount    Decimal  @db.Decimal(10, 2)
+  currency  String   @default("EUR")
+  issuedAt  DateTime @map("issued_at") @db.Timestamptz(6)
+  pdfUrl    String?  @map("pdf_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, issuedAt])
+  @@map("invoices")
+}
+
+model Plan {
+  id            String         @id @default(cuid())
+  name          String
+  description   String?
+  price         Decimal        @db.Decimal(10, 2)
+  billingPeriod BillingPeriod  @map("billing_period")
+  benefits      Json
+  isActive      Boolean        @default(true) @map("is_active")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id                     String             @id @default(cuid())
+  userId                 String             @map("user_id")
+  planId                 String             @map("plan_id")
+  status                 SubscriptionStatus
+  startedAt              DateTime           @map("started_at") @db.Timestamptz(6)
+  endsAt                 DateTime           @map("ends_at") @db.Timestamptz(6)
+  providerSubscriptionId String?            @map("provider_subscription_id")
+  source                 SubscriptionSource
+  createdAt              DateTime           @default(now()) @map("created_at")
+  updatedAt              DateTime           @updatedAt @map("updated_at")
+  plan                   Plan               @relation(fields: [planId], references: [id], onDelete: Restrict)
+  user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerSubscriptionId])
+  @@index([userId, status, endsAt])
+  @@index([source, status])
+  @@map("subscriptions")
+}
+
+model Credit {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  source    String
+  amount    Int
+  remaining Int
+  expiresAt DateTime? @map("expires_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("credits")
+}
+
+model NotificationTemplate {
+  id        String              @id @default(cuid())
+  key       String
+  channel   NotificationChannel
+  subject   String?
+  body      String
+  createdAt DateTime            @default(now()) @map("created_at")
+  updatedAt DateTime            @updatedAt @map("updated_at")
+
+  @@unique([key, channel])
+  @@map("notification_templates")
+}
+
+model Notification {
+  id            String              @id @default(cuid())
+  userId        String              @map("user_id")
+  reservationId String?             @map("reservation_id")
+  channel       NotificationChannel
+  templateKey   String              @map("template_key")
+  payload       Json
+  status        NotificationStatus  @default(queued)
+  scheduledFor  DateTime            @map("scheduled_for") @db.Timestamptz(6)
+  sentAt        DateTime?           @map("sent_at") @db.Timestamptz(6)
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reservation   Reservation?        @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+
+  @@index([status, scheduledFor])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?  @map("actor_user_id")
+  action      String
+  entityType  String   @map("entity_type")
+  entityId    String   @map("entity_id")
+  meta        Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+  actor       User?    @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([entityType, entityId])
+  @@index([actorUserId])
+  @@map("audit_logs")
+}
+
+model Setting {
+  key       String   @id
+  value     Json
+  updatedBy String?  @map("updated_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+model Account {
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([sessionToken])
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
