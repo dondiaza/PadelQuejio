@@ -1,7 +1,7 @@
 import "dotenv/config";
 
 import { PrismaPg } from "@prisma/adapter-pg";
-import { Prisma, PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -44,11 +44,11 @@ async function main() {
   };
 
   for (const [key, value] of Object.entries(baseSettings)) {
-    const jsonValue = value as Prisma.InputJsonValue;
+    const jsonValue = value as unknown as object;
     await prisma.setting.upsert({
       where: { key },
-      update: { value: jsonValue },
-      create: { key, value: jsonValue },
+      update: { value: jsonValue as never },
+      create: { key, value: jsonValue as never },
     });
   }
 
