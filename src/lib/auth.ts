@@ -11,7 +11,9 @@ import {
   getBootstrapAdminEmails,
   isGoogleOAuthConfigured,
 } from "@/lib/env";
-import { prisma } from "@/lib/prisma";
+import { isDatabaseConfigured, prisma } from "@/lib/prisma";
+
+const databaseEnabled = isDatabaseConfigured();
 
 const credentialsSchema = z.object({
   email: z.string().trim().min(1),
@@ -19,6 +21,10 @@ const credentialsSchema = z.object({
 });
 
 async function getRolesForUser(userId: string) {
+  if (!databaseEnabled) {
+    return [];
+  }
+
   const userRoles = await prisma.userRole.findMany({
     where: { userId },
     include: { role: true },
@@ -28,6 +34,10 @@ async function getRolesForUser(userId: string) {
 }
 
 async function ensureRole(userId: string, roleName: string) {
+  if (!databaseEnabled) {
+    return;
+  }
+
   const role = await prisma.role.findUnique({
     where: { name: roleName },
   });
@@ -52,6 +62,10 @@ async function ensureRole(userId: string, roleName: string) {
 }
 
 async function ensureRolesByEmail(userId: string, email: string) {
+  if (!databaseEnabled) {
+    return;
+  }
+
   await ensureRole(userId, "user");
 
   const bootstrapAdmins = getBootstrapAdminEmails();
@@ -70,6 +84,10 @@ const providers: NextAuthOptions["providers"] = [
     async authorize(credentials) {
       const parsed = credentialsSchema.safeParse(credentials);
       if (!parsed.success) {
+        return null;
+      }
+
+      if (!databaseEnabled) {
         return null;
       }
 
@@ -110,16 +128,14 @@ if (isGoogleOAuthConfigured()) {
 }
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  adapter: databaseEnabled ? PrismaAdapter(prisma) : undefined,
   pages: {
     signIn: "/login",
   },
   session: {
     strategy: "jwt",
   },
-  secret:
-    env.AUTH_SECRET ||
-    (env.NODE_ENV !== "production" ? "dev-insecure-auth-secret" : undefined),
+  secret: env.AUTH_SECRET || "padel-quejio-fallback-insecure-secret",
   providers,
   callbacks: {
     async jwt({ token, user }) {
@@ -143,6 +159,10 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async signIn({ user }) {
+      if (!databaseEnabled) {
+        return true;
+      }
+
       if (!user.email) {
         return false;
       }
@@ -166,6 +186,10 @@ export const authOptions: NextAuthOptions = {
   },
   events: {
     async createUser({ user }) {
+      if (!databaseEnabled) {
+        return;
+      }
+
       if (!user.email) {
         return;
       }
