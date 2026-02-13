@@ -1,17 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { prisma } from "@/lib/prisma";
+import { getPublicCourts } from "@/lib/public-data";
 
 export async function GET() {
-  const courts = await prisma.court.findMany({
-    where: { status: "active" },
-    include: {
-      images: {
-        orderBy: { sortOrder: "asc" },
-      },
-    },
-    orderBy: { name: "asc" },
-  });
-
-  return NextResponse.json({ data: courts });
+  const courts = await getPublicCourts();
+  return NextResponse.json({ data: courts }, { status: 200 });
 }

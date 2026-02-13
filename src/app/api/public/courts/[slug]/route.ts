@@ -1,20 +1,14 @@
 import { NextResponse } from "next/server";
 
-import { prisma } from "@/lib/prisma";
+import { getPublicCourts } from "@/lib/public-data";
 
 type Params = Promise<{ slug: string }>;
 
 export async function GET(_: Request, context: { params: Params }) {
   const { slug } = await context.params;
 
-  const court = await prisma.court.findUnique({
-    where: { slug },
-    include: {
-      images: {
-        orderBy: { sortOrder: "asc" },
-      },
-    },
-  });
+  const courts = await getPublicCourts();
+  const court = courts.find((entry) => entry.slug === slug);
 
   if (!court) {
     return NextResponse.json({ error: "Court not found" }, { status: 404 });
