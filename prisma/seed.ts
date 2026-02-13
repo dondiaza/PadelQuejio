@@ -1,5 +1,6 @@
 import "dotenv/config";
 
+import { hash } from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
@@ -26,6 +27,41 @@ async function main() {
       }),
     ),
   );
+
+  const adminEmail = process.env.SEED_ADMIN_EMAIL?.toLowerCase() ?? "admin";
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "admin";
+  const adminName = process.env.SEED_ADMIN_NAME ?? "admin";
+  const adminPasswordHash = await hash(adminPassword, 12);
+
+  const adminUser = await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: {
+      name: adminName,
+      status: "active",
+      passwordHash: adminPasswordHash,
+    },
+    create: {
+      email: adminEmail,
+      name: adminName,
+      status: "active",
+      passwordHash: adminPasswordHash,
+    },
+  });
+
+  const [roleUser, roleAdmin] = await Promise.all([
+    prisma.role.findUnique({ where: { name: "user" } }),
+    prisma.role.findUnique({ where: { name: "admin" } }),
+  ]);
+
+  if (roleUser && roleAdmin) {
+    await prisma.userRole.createMany({
+      data: [
+        { userId: adminUser.id, roleId: roleUser.id },
+        { userId: adminUser.id, roleId: roleAdmin.id },
+      ],
+      skipDuplicates: true,
+    });
+  }
 
   const baseSettings: Record<string, unknown> = {
     booking_days_ahead_default: 14,

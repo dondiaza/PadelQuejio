@@ -3,7 +3,15 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 
 export async function SiteHeader() {
-  const session = await auth();
+  let session: Awaited<ReturnType<typeof auth>> | null = null;
+  try {
+    session = await auth();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (!message.includes("Dynamic server usage")) {
+      console.error("Failed to resolve user session in header:", error);
+    }
+  }
   const roles = session?.user?.roles ?? [];
   const canAccessAdmin = roles.includes("admin") || roles.includes("staff");
 

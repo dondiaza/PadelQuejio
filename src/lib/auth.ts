@@ -6,12 +6,16 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { z } from "zod";
 
-import { env } from "@/lib/env";
+import {
+  env,
+  getBootstrapAdminEmails,
+  isGoogleOAuthConfigured,
+} from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 
 const credentialsSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
+  email: z.string().trim().min(1),
+  password: z.string().min(1),
 });
 
 async function getRolesForUser(userId: string) {
@@ -23,6 +27,88 @@ async function getRolesForUser(userId: string) {
   return userRoles.map((entry) => entry.role.name);
 }
 
+async function ensureRole(userId: string, roleName: string) {
+  const role = await prisma.role.findUnique({
+    where: { name: roleName },
+  });
+
+  if (!role) {
+    return;
+  }
+
+  await prisma.userRole.upsert({
+    where: {
+      userId_roleId: {
+        userId,
+        roleId: role.id,
+      },
+    },
+    update: {},
+    create: {
+      userId,
+      roleId: role.id,
+    },
+  });
+}
+
+async function ensureRolesByEmail(userId: string, email: string) {
+  await ensureRole(userId, "user");
+
+  const bootstrapAdmins = getBootstrapAdminEmails();
+  if (bootstrapAdmins.has(email.toLowerCase())) {
+    await ensureRole(userId, "admin");
+  }
+}
+
+const providers: NextAuthOptions["providers"] = [
+  CredentialsProvider({
+    name: "Email y contrasena",
+    credentials: {
+      email: { label: "Usuario o email", type: "text" },
+      password: { label: "Contrasena", type: "password" },
+    },
+    async authorize(credentials) {
+      const parsed = credentialsSchema.safeParse(credentials);
+      if (!parsed.success) {
+        return null;
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { email: parsed.data.email.toLowerCase() },
+      });
+
+      if (!user || !user.passwordHash) {
+        return null;
+      }
+
+      const isValid = await compare(parsed.data.password, user.passwordHash);
+      if (!isValid) {
+        return null;
+      }
+
+      const roles = await getRolesForUser(user.id);
+      return {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        image: user.image,
+        roles,
+        status: user.status,
+      };
+    },
+  }),
+];
+
+if (isGoogleOAuthConfigured()) {
+  providers.unshift(
+    GoogleProvider({
+      clientId: env.GOOGLE_CLIENT_ID!,
+      clientSecret: env.GOOGLE_CLIENT_SECRET!,
+      allowDangerousEmailAccountLinking: true,
+    }),
+  );
+}
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   pages: {
@@ -31,50 +117,10 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
   },
-  secret: env.AUTH_SECRET,
-  providers: [
-    GoogleProvider({
-      clientId: env.GOOGLE_CLIENT_ID,
-      clientSecret: env.GOOGLE_CLIENT_SECRET,
-      allowDangerousEmailAccountLinking: true,
-    }),
-    CredentialsProvider({
-      name: "Email y contrasena",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Contrasena", type: "password" },
-      },
-      async authorize(credentials) {
-        const parsed = credentialsSchema.safeParse(credentials);
-        if (!parsed.success) {
-          return null;
-        }
-
-        const user = await prisma.user.findUnique({
-          where: { email: parsed.data.email.toLowerCase() },
-        });
-
-        if (!user || !user.passwordHash) {
-          return null;
-        }
-
-        const isValid = await compare(parsed.data.password, user.passwordHash);
-        if (!isValid) {
-          return null;
-        }
-
-        const roles = await getRolesForUser(user.id);
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.image,
-          roles,
-          status: user.status,
-        };
-      },
-    }),
-  ],
+  secret:
+    env.AUTH_SECRET ||
+    (env.NODE_ENV !== "production" ? "dev-insecure-auth-secret" : undefined),
+  providers,
   callbacks: {
     async jwt({ token, user }) {
       if (user?.id) {
@@ -113,23 +159,18 @@ export const authOptions: NextAuthOptions = {
         return false;
       }
 
-      const roleCount = await prisma.userRole.count({
-        where: { userId: existing.id },
-      });
-
-      if (roleCount === 0) {
-        const userRole = await prisma.role.findUnique({ where: { name: "user" } });
-        if (userRole) {
-          await prisma.userRole.create({
-            data: {
-              userId: existing.id,
-              roleId: userRole.id,
-            },
-          });
-        }
-      }
+      await ensureRolesByEmail(existing.id, existing.email);
 
       return true;
+    },
+  },
+  events: {
+    async createUser({ user }) {
+      if (!user.email) {
+        return;
+      }
+
+      await ensureRolesByEmail(user.id, user.email);
     },
   },
 };

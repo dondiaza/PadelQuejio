@@ -13,6 +13,8 @@
     "prisma:push": "prisma db push",
     "prisma:studio": "prisma studio",
     "prisma:seed": "tsx prisma/seed.ts",
+    "admin:create": "tsx scripts/create-admin.ts",
+    "api:dev": "tsx backend/server.ts",
     "worker": "tsx src/worker.ts",
     "db:constraints": "tsx scripts/apply-constraints.ts"
   },

@@ -2,19 +2,26 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import Stripe from "stripe";
 
-import { env } from "@/lib/env";
+import { env, isStripeConfigured, requireEnvValue } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/rbac";
-
-const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
-  apiVersion: "2026-01-28.clover",
-});
 
 const checkoutSchema = z.object({
   reservationId: z.string(),
 });
 
 export async function POST(request: Request) {
+  if (!isStripeConfigured()) {
+    return NextResponse.json(
+      { error: "Stripe is not configured" },
+      { status: 503 },
+    );
+  }
+
+  const stripe = new Stripe(requireEnvValue("STRIPE_SECRET_KEY"), {
+    apiVersion: "2026-01-28.clover",
+  });
+
   const guard = await requireUser();
   if ("error" in guard) {
     return guard.error;

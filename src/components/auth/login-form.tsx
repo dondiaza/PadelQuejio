@@ -4,7 +4,11 @@ import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
 
-export function LoginForm() {
+type LoginFormProps = {
+  googleEnabled: boolean;
+};
+
+export function LoginForm({ googleEnabled }: LoginFormProps) {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/app";
   const [loading, setLoading] = useState(false);
@@ -68,13 +72,20 @@ export function LoginForm() {
         </button>
       </form>
 
-      <button
-        type="button"
-        onClick={() => signIn("google", { callbackUrl })}
-        className="btn-secondary mt-3 w-full text-sm"
-      >
-        Continuar con Gmail
-      </button>
+      {googleEnabled ? (
+        <button
+          type="button"
+          onClick={() => signIn("google", { callbackUrl })}
+          className="btn-secondary mt-3 w-full text-sm"
+        >
+          Continuar con Gmail
+        </button>
+      ) : (
+        <p className="mt-3 text-xs text-muted">
+          Acceso con Google no disponible. Configura `GOOGLE_CLIENT_ID` y
+          `GOOGLE_CLIENT_SECRET` en entorno.
+        </p>
+      )}
     </div>
   );
 }

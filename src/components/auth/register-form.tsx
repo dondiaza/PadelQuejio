@@ -4,7 +4,11 @@ import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 
-export function RegisterForm() {
+type RegisterFormProps = {
+  googleEnabled: boolean;
+};
+
+export function RegisterForm({ googleEnabled }: RegisterFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -93,13 +97,15 @@ export function RegisterForm() {
         Ya tienes cuenta? <Link href="/login" className="text-secondary">Entrar</Link>
       </p>
 
-      <button
-        type="button"
-        onClick={() => signIn("google", { callbackUrl: "/app" })}
-        className="btn-secondary mt-3 w-full text-sm"
-      >
-        Crear cuenta con Gmail
-      </button>
+      {googleEnabled ? (
+        <button
+          type="button"
+          onClick={() => signIn("google", { callbackUrl: "/app" })}
+          className="btn-secondary mt-3 w-full text-sm"
+        >
+          Crear cuenta con Gmail
+        </button>
+      ) : null}
     </div>
   );
 }

@@ -1,7 +1,8 @@
 # Padel Quejio
 
 Base tecnico-funcional para plataforma PRO de reservas de padel:
-- Frontend + API en `Next.js + TypeScript + Tailwind`.
+- Frontend en `Next.js + TypeScript + Tailwind`.
+- Backend separado en `backend/server.ts` (servicio Node independiente).
 - Auth con `NextAuth` (email/password + Google OAuth).
 - Datos con `PostgreSQL + Prisma`.
 - Reglas criticas: disponibilidad, anti-solape, `pending_payment` expirado, suscripcion manual cash, auditoria.
@@ -25,15 +26,50 @@ npm run db:constraints
 npm run prisma:seed
 ```
 
+Admin por defecto (seed):
+- usuario: `admin`
+- password: `admin`
+
+Si quieres regenerar/forzar admin:
+```bash
+npm run admin:create
+```
+
 4. Arranca app:
 ```bash
 npm run dev
 ```
 
-5. (Opcional recomendado) Arranca worker:
+5. Arranca backend separado:
+```bash
+npm run api:dev
+```
+
+6. (Opcional recomendado) Arranca worker:
 ```bash
 npm run worker
 ```
+
+## Acceso admin
+
+- Opcion 1 (seed): usuario `admin` / password `admin`.
+- Opcion 2: `npm run admin:create`.
+- Opcion 3 (Google/email): define `ADMIN_BOOTSTRAP_EMAILS` con emails separados por coma. Al iniciar sesion se asigna rol admin automaticamente a esos usuarios.
+
+## Google OAuth (evitar `Error 401: invalid_client`)
+
+En Google Cloud Console:
+
+1. Crea cliente OAuth tipo Web.
+2. `Authorized JavaScript origins`:
+   - `https://padel.panojotro.com`
+3. `Authorized redirect URIs`:
+   - `https://padel.panojotro.com/api/auth/callback/google`
+4. Copia valores reales en Vercel:
+   - `GOOGLE_CLIENT_ID`
+   - `GOOGLE_CLIENT_SECRET`
+
+Si estas variables faltan o son placeholder, el boton de Google se desactiva automaticamente para evitar bloqueos.
 
 ## Endpoints clave implementados
 

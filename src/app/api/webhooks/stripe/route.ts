@@ -2,15 +2,22 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
 import { writeAuditLog } from "@/lib/audit";
-import { env } from "@/lib/env";
+import { isStripeConfigured, requireEnvValue } from "@/lib/env";
 import { scheduleReservationConfirmedNotifications } from "@/lib/notifications/scheduler";
 import { prisma } from "@/lib/prisma";
 
-const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
-  apiVersion: "2026-01-28.clover",
-});
-
 export async function POST(request: Request) {
+  if (!isStripeConfigured()) {
+    return NextResponse.json(
+      { error: "Stripe is not configured" },
+      { status: 503 },
+    );
+  }
+
+  const stripe = new Stripe(requireEnvValue("STRIPE_SECRET_KEY"), {
+    apiVersion: "2026-01-28.clover",
+  });
+
   const signature = request.headers.get("stripe-signature");
   if (!signature) {
     return NextResponse.json({ error: "Missing Stripe signature" }, { status: 400 });
@@ -23,7 +30,7 @@ export async function POST(request: Request) {
     event = stripe.webhooks.constructEvent(
       payload,
       signature,
-      env.STRIPE_WEBHOOK_SECRET,
+      requireEnvValue("STRIPE_WEBHOOK_SECRET"),
     );
   } catch {
     return NextResponse.json({ error: "Invalid Stripe signature" }, { status: 400 });

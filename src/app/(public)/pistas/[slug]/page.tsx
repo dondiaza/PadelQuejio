@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { SimplePage } from "@/components/simple-page";
-import { prisma } from "@/lib/prisma";
+import { getPublicCourts } from "@/lib/public-data";
 
 type Params = Promise<{ slug: string }>;
 
@@ -9,10 +9,8 @@ export const dynamic = "force-dynamic";
 
 export default async function CourtDetailPage(props: { params: Params }) {
   const { slug } = await props.params;
-  const court = await prisma.court.findUnique({
-    where: { slug },
-    include: { images: { orderBy: { sortOrder: "asc" } } },
-  });
+  const courts = await getPublicCourts();
+  const court = courts.find((entry) => entry.slug === slug);
 
   if (!court) {
     notFound();
@@ -30,7 +28,7 @@ export default async function CourtDetailPage(props: { params: Params }) {
         </article>
         <article className="card p-4">
           <p className="text-sm text-muted">Slot base</p>
-          <p className="text-2xl text-secondary">{court.baseSlotMinutes} min</p>
+          <p className="text-2xl text-secondary">60 min</p>
         </article>
       </div>
     </SimplePage>

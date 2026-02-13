@@ -2,21 +2,12 @@ import Link from "next/link";
 
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { prisma } from "@/lib/prisma";
+import { getPublicCourts } from "@/lib/public-data";
 
 export const dynamic = "force-dynamic";
 
 export default async function CourtsPage() {
-  const courts = await prisma.court.findMany({
-    where: { status: "active" },
-    include: {
-      images: {
-        orderBy: { sortOrder: "asc" },
-        take: 1,
-      },
-    },
-    orderBy: { name: "asc" },
-  });
+  const courts = await getPublicCourts();
 
   return (
     <div className="min-h-screen">

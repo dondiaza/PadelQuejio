@@ -5,6 +5,10 @@ import { expirePendingReservations } from "@/lib/reservations";
 import { expireOutdatedSubscriptions } from "@/lib/subscriptions";
 
 function isAuthorized(request: Request) {
+  if (!env.INTERNAL_JOB_SECRET) {
+    return false;
+  }
+
   return request.headers.get("x-job-secret") === env.INTERNAL_JOB_SECRET;
 }
 
